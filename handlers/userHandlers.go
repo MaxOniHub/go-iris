@@ -3,12 +3,12 @@ package handlers
 import (
 	"github.com/kataras/iris"
 	"github.com/maxoni/auth-iris/src/data_mappers"
-	"github.com/maxoni/auth-iris/src/services"
 	"github.com/maxoni/auth-iris/src/helpers"
+	"github.com/maxoni/auth-iris/src/services"
 )
 
 func GetUsers(ctx iris.Context) {
-	connection := helpers.Context{}.GetConnection()
+	connection := helpers.NewContext(ctx).GetConnection()
 
 	userDataMapper := data_mappers.NewUserDataMapper(connection)
 
@@ -19,34 +19,32 @@ func GetUsers(ctx iris.Context) {
 }
 
 func UserSingle(ctx iris.Context) {
-	connection :=  helpers.Context{}.GetConnection()
+	connection := helpers.Context{Ctx:ctx}.GetConnection()
 	id := ctx.Params().Get("id")
 
-	userDataMapper := data_mappers.NewUserDataMapper(connection)
+	userService := services.NewUserService(connection)
 
-	User, err := userDataMapper.FindById(id)
+	User, err := userService.FindById(id)
 
 	if err != nil {
 		ctx.StatusCode(404)
-		ctx.JSON(err.NotFound())
+		ctx.JSON(userService.GetError())
 	} else {
 		ctx.JSON(User)
 	}
 }
 
 func UserMe(ctx iris.Context) {
-	context := helpers.Context{Ctx:ctx}
-	token := context.GetToken()
-	connection := context.GetConnection()
+	context := helpers.NewContext(ctx)
 
-	userId,_ := services.NewJwtTokenService().ParseToken(token)
-	userDataMapper := data_mappers.NewUserDataMapper(connection)
+	userId, _ := services.NewJwtTokenService().ParseToken(context.GetToken())
+	userService := services.NewUserService(context.GetConnection())
 
-	User, err := userDataMapper.FindById(userId.(string))
+	User, err := userService.FindById(userId.(string))
 
 	if err != nil {
 		ctx.StatusCode(404)
-		ctx.JSON(err.NotFound())
+		ctx.JSON(userService.GetError())
 	} else {
 		ctx.JSON(User)
 	}

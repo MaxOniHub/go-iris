@@ -2,23 +2,14 @@ package handlers
 
 import (
 	"github.com/kataras/iris"
-	"database/sql"
 	"github.com/maxoni/auth-iris/src/helpers"
-	"github.com/maxoni/auth-iris/src/variables"
 	"github.com/maxoni/auth-iris/src/models"
-	"github.com/maxoni/auth-iris/src/data_mappers"
 	"github.com/maxoni/auth-iris/src/services"
-	"github.com/maxoni/auth-iris/src/errors"
 )
 
 func SignIn(ctx iris.Context) {
-
-	connection := ctx.Values().Get(variables.DB).(*sql.DB)
-
+	connection := helpers.NewContext(ctx).GetConnection()
 	loginModel := &models.LoginModel{}
-	passwordManager := helpers.PasswordManager{}
-
-	mapper := data_mappers.NewUserDataMapper(connection)
 
 	err := ctx.ReadJSON(&loginModel)
 
@@ -26,27 +17,23 @@ func SignIn(ctx iris.Context) {
 		return
 	}
 
-	User := mapper.FindByEmail(loginModel.Email)
+	signInService := services.NewSignInService(connection)
+	token, success := signInService.SignIn(loginModel)
 
-	if passwordManager.CompareHash(User.Password, loginModel.Password) == true {
-		jwtTokenService := services.NewJwtTokenService()
-
-		token, _ := jwtTokenService.CreateToken(User.Id)
-
+	if success {
 		ctx.JSON(map[string]string{
-			"access_token":token,
+			"access_token": token,
 		})
 	} else {
 		ctx.StatusCode(401)
-		ctx.JSON(errors.ErrorHandler{}.Unauthorized())
+		ctx.JSON(signInService.GetError())
 	}
-
 }
 
 func SignUp(ctx iris.Context) {
-	connection := ctx.Values().Get(variables.DB).(*sql.DB)
+	connection := helpers.NewContext(ctx).GetConnection()
 
-	signUpModel := models.SignUpModel{}
+	signUpModel := &models.SignUpModel{}
 	SignUpService := services.NewSignUpService(connection)
 
 	err := ctx.ReadJSON(&signUpModel)
@@ -55,5 +42,12 @@ func SignUp(ctx iris.Context) {
 		return
 	}
 
-	SignUpService.SignUp(&signUpModel)
+	if res := SignUpService.SignUp(signUpModel); res {
+		ctx.JSON(map[string]string{
+			"message": "Success",
+		})
+	} else {
+		ctx.StatusCode(400)
+		ctx.JSON(SignUpService.GetError())
+	}
 }

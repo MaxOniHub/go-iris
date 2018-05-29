@@ -1,27 +1,24 @@
 package data_mappers
 
 import (
-	"log"
-	"database/sql"
-	"github.com/maxoni/auth-iris/src/errors"
 	"github.com/maxoni/auth-iris/src/models"
 	"strconv"
+	"github.com/jinzhu/gorm"
 )
 
 type UserDataMapper struct {
 	IDataMapper
-	Connection   *sql.DB
+	Connection   *gorm.DB
 	User         *models.User
 	Limit        *Limit
-	ErrorHandler errors.Error
 }
 
-func NewUserDataMapper(db *sql.DB) *UserDataMapper {
+func NewUserDataMapper(db *gorm.DB) *UserDataMapper {
 	mapper := new(UserDataMapper)
 	mapper.Connection = db
 	mapper.User = &models.User{}
 	mapper.Limit = NewLimit(0, 20)
-	mapper.ErrorHandler = &errors.ErrorHandler{}
+	mapper.Connection.SingularTable(true)
 	return mapper
 }
 
@@ -39,70 +36,42 @@ func (m UserDataMapper) FindAll() []models.User {
 
 	limit := strconv.FormatInt(m.Limit.GetLimit(), 10)
 	offset := strconv.FormatInt(m.Limit.GetOffset(), 10)
-
-	// Execute the query
-	results, err := m.Connection.Query("SELECT id, username, email FROM User LIMIT " + limit + " OFFSET " + offset)
-	if err != nil {
-		panic(err.Error()) // proper error handling instead of panic in your app
-	}
-
 	var users []models.User
 
-	for results.Next() {
-		var u models.User
-		// for each row, scan the result into our tag composite object
-		err = results.Scan(&u.Id, &u.Username, &u.Email)
-		if err != nil {
-			log.Printf(err.Error()) // proper error handling instead of panic in your app
-		}
-		// and then print out the tag's Name attribute
-		users = append(users, u)
-	}
+	m.Connection.Offset(offset).Limit(limit).Find(&users)
+
 	return users
 }
 
-func (m UserDataMapper) FindByEmail(email string) *models.User {
+func (m UserDataMapper) FindByEmail(email string) (*models.User, error) {
 
 	U := m.User
-
-	err := m.Connection.QueryRow("SELECT * FROM User where email='" + email + "'").Scan(&U.Id, &U.Username, &U.Email, &U.FirstName, &U.LastName, &U.Password)
-
-	if err != nil {
-		log.Println(err)
+	if res:=m.Connection.First(&U, "email = ?", email); res.Error !=nil {
+		return U, res.Error
 	}
-	return U
+	return U, nil
 }
 
-func (m UserDataMapper) FindById(id string) (*models.User, errors.Error) {
+func (m UserDataMapper) FindById(id string) (*models.User, error) {
 
 	U := m.User
-
-	err := m.Connection.QueryRow("SELECT * FROM User where id=?", id).Scan(&U.Id, &U.Username, &U.Email, &U.FirstName, &U.LastName, &U.Password)
-
-	log.Println(err)
-	if err != nil {
-		return U, m.ErrorHandler
+	if res := m.Connection.First(&U, id); res.Error != nil {
+		return U, res.Error
 	}
 
 	return U, nil
 }
 
-func (m *UserDataMapper) Insert(user *models.User) {
+func (m *UserDataMapper) Insert(user *models.User) (bool, error) {
 
-	u := user
+	m.Connection.NewRecord(user)
 
-	stmt, err := m.Connection.Prepare("INSERT INTO User (username, email, first_name, last_name, password) values(?, ?, ?, ?, ?)")
-	if err != nil {
-		panic(err)
+	if result := m.Connection.Create(&user); result.Error != nil {
+		return false, result.Error
 	}
-	defer stmt.Close()
 
-	res, err := stmt.Exec(u.Username, u.Email, u.FirstName.String, u.LastName.String, u.Password)
+	return true, nil
 
-	if err != nil {
-		panic(err)
-	}
-	_ = res
 }
 
 func (m UserDataMapper) GetEntity() *models.User {

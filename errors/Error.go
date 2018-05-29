@@ -5,10 +5,12 @@ type Error interface {
 	NotFound() map[string]string
 	BadRequest() map[string]string
 	Unauthorized() map[string]string
+	SetError(error string)
+	GetError() map[string]string
 }
 
 type ErrorHandler struct {
-
+	errors map[string]string
 }
 
 func (err ErrorHandler) NotFound() map[string]string {
@@ -23,10 +25,18 @@ func (err ErrorHandler) BadRequest() map[string]string{
 	}
 }
 
-func (err ErrorHandler) Unauthorized() map[string]string{
+func (err ErrorHandler) Unauthorized() map[string]string {
 	return map[string]string{
 		"message": "Unauthorized",
 	}
+}
+
+func (err *ErrorHandler) SetError(error string) {
+	err.errors = map[string]string{"message": error}
+}
+
+func (err *ErrorHandler) GetError() map[string]string {
+	return err.errors
 }
 
 

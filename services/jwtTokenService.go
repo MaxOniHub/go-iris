@@ -16,7 +16,7 @@ func NewJwtTokenService() *JwtTokenService {
 	jwt := new(JwtTokenService)
 	jwt.secret = "unicornsAreAwesome"
 	jwt.alg = "HS256"
-	jwt.expired = time.Now().Add(time.Hour * 1).Unix()
+	jwt.expired = time.Now().Add(time.Hour * 8).Unix()
 
 	return jwt
 }

@@ -15,9 +15,9 @@ type User struct {
 	Password  string                    `json:"-"`
 }
 
-func (u User) Validate(data interface{}) (bool, interface{}) {
-	if errs := validator.Validate(data); errs != nil {
-		return false, errs.Error()
+func (u User) Validate(data interface{}) (bool, error) {
+	if err := validator.Validate(data); err != nil {
+		return false, err
 	}
 	return true, nil
 }

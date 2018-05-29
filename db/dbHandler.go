@@ -1,30 +1,30 @@
 package db
 
 import (
-	"log"
-	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jinzhu/gorm"
+	"log"
 )
 
-
 type DbHandler struct {
-	Db *sql.DB
+	Db *gorm.DB
 }
 
 func NewDbHandler() *DbHandler  {
 	dbHandler := new(DbHandler)
 	dbHandler.Db = InitDB()
-	return  dbHandler
+	return dbHandler
 }
 
-func InitDB() *sql.DB {
-	Db, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/gobase")
+func InitDB() *gorm.DB {
+	db, err := gorm.Open("mysql", "root:@/gobase?charset=utf8&parseTime=True&loc=Local")
+
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
-	return Db
+	return db
 }
 
-func (repoHandler DbHandler) GetDb() *sql.DB {
+func (repoHandler DbHandler) GetDb() *gorm.DB {
 	return repoHandler.Db
 }

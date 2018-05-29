@@ -2,24 +2,51 @@ package services
 
 import (
 	"github.com/maxoni/auth-iris/src/data_mappers"
-	"database/sql"
 	"github.com/maxoni/auth-iris/src/models"
+	"github.com/jinzhu/gorm"
+	"github.com/maxoni/auth-iris/src/errors"
 )
 
 type UserService struct {
 	IEntityService
-	DataMapper *data_mappers.UserDataMapper
-	error string
+	DataMapper   *data_mappers.UserDataMapper
+	ErrorHandler errors.Error
 }
 
-func NewUserService(db *sql.DB) *UserService {
+func NewUserService(db *gorm.DB) *UserService {
 	uS := new(UserService)
 	uS.DataMapper = data_mappers.NewUserDataMapper(db)
+	uS.ErrorHandler = &errors.ErrorHandler{}
+
 	return uS
 }
 
-func (uS *UserService)Save() {
-	uS.DataMapper.Insert(uS.GetEntity())
+func (uS *UserService) Save() bool {
+	entity := uS.GetEntity()
+	success, err := uS.DataMapper.Insert(entity)
+
+	if err != nil {
+		uS.SetError(err.Error())
+	}
+	return success
+}
+
+func (uS *UserService) FindById(id string) (*models.User, error) {
+	User, err := uS.DataMapper.FindById(id)
+
+	if err != nil {
+		uS.ErrorHandler.SetError(err.Error())
+	}
+	return User, err
+}
+
+func (uS *UserService) FindByEmail(email string) (*models.User, error) {
+	User, err := uS.DataMapper.FindByEmail(email)
+
+	if err != nil {
+		uS.ErrorHandler.SetError(err.Error())
+	}
+	return User, err
 }
 
 func (uS *UserService) Validate(data *models.SignUpModel) bool {
@@ -27,7 +54,7 @@ func (uS *UserService) Validate(data *models.SignUpModel) bool {
 
 	success, err := User.Validate(data)
 	if err != nil{
-		uS.SetError(err.(string))
+		uS.SetError(err.Error())
 	}
 	uS.Load(data)
 	return success
@@ -54,9 +81,9 @@ func (uS *UserService) SetEntity(entity *models.User) {
 }
 
 func (uS *UserService)SetError(error string) {
-	uS.error = error
+	uS.ErrorHandler.SetError(error)
 }
 
-func (uS UserService)GetError() string {
-	return uS.error
+func (uS UserService)GetError() map[string]string {
+	return uS.ErrorHandler.GetError()
 }
