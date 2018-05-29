@@ -6,8 +6,9 @@ import (
 )
 
 type IDataMapper interface {
-	FindAll() []models.IModel
-	FindById(id string) (models.IModel, errors.Error)
-	GetEntity() models.IModel
-	SetEntity(model models.IModel)
+	FindAll() []models.User
+	FindById(id string) (*models.User, errors.Error)
+	GetEntity() *models.User
+	SetEntity(model *models.User)
+	Insert(user *models.User)
 }

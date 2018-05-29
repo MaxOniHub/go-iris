@@ -24,7 +24,7 @@ func main() {
 	users.Use(jwtHandler.Serve)
 	users.Get("/", handlers.GetUsers)
 	users.Get("/{id:int}",handlers.UserSingle)
-	users.Get("/me", handlers.UserMe)
+	users.Get("/me", middleware.AuthHeaderReader, handlers.UserMe)
 
 	auth := v1.Party("/auth")
 	auth.Post("/sign-in", handlers.SignIn)
